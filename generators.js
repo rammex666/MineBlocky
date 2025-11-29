@@ -693,3 +693,283 @@ function getCommandsList(userCode) {
 
     return commandsList;
 }
+
+/* =========================================
+   SCRIPTS DE COMPILATION
+   ========================================= */
+
+/**
+ * Génère le fichier README.md avec les instructions de compilation
+ */
+function generateReadme(pluginName, javaVersion, mcVersion) {
+    return `# ${pluginName}
+
+Plugin Minecraft généré avec MineBlockly
+
+## Prérequis
+
+- **Java ${javaVersion}** (JDK)
+- **Apache Maven** 3.6+
+
+## Versions
+
+- Minecraft: ${mcVersion}
+- Java: ${javaVersion}
+- API: Spigot/Bukkit
+
+## Installation de Maven
+
+### Windows
+1. Téléchargez Maven depuis https://maven.apache.org/download.cgi
+2. Extrayez l'archive dans C:\\Program Files\\Apache\\maven
+3. Ajoutez le dossier bin de Maven à votre PATH
+
+### Linux/Mac
+\`\`\`bash
+# Ubuntu/Debian
+sudo apt-get install maven
+
+# Mac (avec Homebrew)
+brew install maven
+\`\`\`
+
+## Compilation
+
+### Méthode 1 : Scripts automatiques
+
+#### Windows
+\`\`\`cmd
+build.bat
+\`\`\`
+
+#### Linux/Mac
+\`\`\`bash
+chmod +x build.sh
+./build.sh
+\`\`\`
+
+Le fichier JAR sera généré dans \`target/${pluginName.toLowerCase()}-1.0.jar\`
+
+### Méthode 2 : Maven manuel
+
+\`\`\`bash
+mvn clean package
+\`\`\`
+
+## Installation du plugin
+
+1. Copiez le fichier JAR généré dans le dossier \`plugins/\` de votre serveur Spigot/Bukkit
+2. Redémarrez votre serveur
+3. Le plugin sera chargé automatiquement
+
+## Vérification de la version Java
+
+Pour vérifier votre version de Java :
+
+\`\`\`bash
+java -version
+\`\`\`
+
+Vous devez avoir **Java ${javaVersion}** ou supérieur.
+
+## Problèmes courants
+
+### "Unsupported class file major version"
+Votre version de Java est trop ancienne. Installez Java ${javaVersion} ou supérieur.
+
+### "JAVA_HOME is not set"
+Définissez la variable d'environnement JAVA_HOME :
+
+#### Windows
+\`\`\`cmd
+setx JAVA_HOME "C:\\Program Files\\Java\\jdk-${javaVersion}"
+\`\`\`
+
+#### Linux/Mac
+\`\`\`bash
+export JAVA_HOME=/usr/lib/jvm/java-${javaVersion}-openjdk
+\`\`\`
+
+## Structure du projet
+
+\`\`\`
+${pluginName.toLowerCase()}/
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/mineblockly/plugin/
+│       │       ├── Main.java
+│       │       ├── GUIManager.java
+│       │       ├── ConfigManager.java
+│       │       ├── events/
+│       │       │   └── *Listener.java
+│       │       └── commands/
+│       │           └── *Command.java
+│       └── resources/
+│           └── plugin.yml
+├── pom.xml
+├── build.bat
+├── build.sh
+└── README.md
+\`\`\`
+
+## Support
+
+Plugin généré avec MineBlockly - https://github.com/yourusername/mineblockly
+
+---
+
+*Généré automatiquement par MineBlockly*
+`;
+}
+
+/**
+ * Génère le script de compilation pour Windows (build.bat)
+ */
+function generateBuildBat(pluginName, javaVersion) {
+    return `@echo off
+echo ========================================
+echo Compilation de ${pluginName}
+echo ========================================
+echo.
+
+REM Vérifier si Maven est installé
+where mvn >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [ERREUR] Maven n'est pas installé ou n'est pas dans le PATH
+    echo.
+    echo Veuillez installer Maven depuis https://maven.apache.org/download.cgi
+    echo et ajouter le dossier bin de Maven a votre PATH
+    pause
+    exit /b 1
+)
+
+REM Vérifier la version de Java
+echo Verification de la version de Java...
+java -version 2>&1 | findstr /i "version" > nul
+if %errorlevel% neq 0 (
+    echo [ERREUR] Java n'est pas installé
+    echo.
+    echo Veuillez installer Java ${javaVersion} ou superieur
+    pause
+    exit /b 1
+)
+
+echo Version de Java detectee :
+java -version
+echo.
+
+REM Vérifier que JAVA_HOME est défini
+if not defined JAVA_HOME (
+    echo [ATTENTION] JAVA_HOME n'est pas defini
+    echo Le build peut echouer si vous n'avez pas Java ${javaVersion}
+    echo.
+)
+
+echo ========================================
+echo Compilation avec Maven...
+echo ========================================
+echo.
+
+REM Compiler le projet
+call mvn clean package
+
+if %errorlevel% equ 0 (
+    echo.
+    echo ========================================
+    echo [SUCCES] Compilation reussie !
+    echo ========================================
+    echo.
+    echo Le fichier JAR a ete genere dans :
+    echo target\\${pluginName.toLowerCase()}-1.0.jar
+    echo.
+    echo Copiez ce fichier dans le dossier plugins/ de votre serveur
+    echo.
+) else (
+    echo.
+    echo ========================================
+    echo [ERREUR] La compilation a echoue
+    echo ========================================
+    echo.
+    echo Verifiez que vous avez Java ${javaVersion} ou superieur
+    echo.
+)
+
+pause
+`;
+}
+
+/**
+ * Génère le script de compilation pour Linux/Mac (build.sh)
+ */
+function generateBuildSh(pluginName, javaVersion) {
+    return `#!/bin/bash
+
+echo "========================================"
+echo "Compilation de ${pluginName}"
+echo "========================================"
+echo ""
+
+# Vérifier si Maven est installé
+if ! command -v mvn &> /dev/null; then
+    echo "[ERREUR] Maven n'est pas installé"
+    echo ""
+    echo "Installation de Maven :"
+    echo "  Ubuntu/Debian: sudo apt-get install maven"
+    echo "  Mac (Homebrew): brew install maven"
+    echo ""
+    exit 1
+fi
+
+# Vérifier la version de Java
+echo "Vérification de la version de Java..."
+if ! command -v java &> /dev/null; then
+    echo "[ERREUR] Java n'est pas installé"
+    echo ""
+    echo "Veuillez installer Java ${javaVersion} ou supérieur"
+    echo ""
+    exit 1
+fi
+
+echo "Version de Java détectée :"
+java -version
+echo ""
+
+# Vérifier que JAVA_HOME est défini
+if [ -z "\$JAVA_HOME" ]; then
+    echo "[ATTENTION] JAVA_HOME n'est pas défini"
+    echo "Le build peut échouer si vous n'avez pas Java ${javaVersion}"
+    echo ""
+fi
+
+echo "========================================"
+echo "Compilation avec Maven..."
+echo "========================================"
+echo ""
+
+# Compiler le projet
+mvn clean package
+
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "========================================"
+    echo "[SUCCÈS] Compilation réussie !"
+    echo "========================================"
+    echo ""
+    echo "Le fichier JAR a été généré dans :"
+    echo "target/${pluginName.toLowerCase()}-1.0.jar"
+    echo ""
+    echo "Copiez ce fichier dans le dossier plugins/ de votre serveur"
+    echo ""
+else
+    echo ""
+    echo "========================================"
+    echo "[ERREUR] La compilation a échoué"
+    echo "========================================"
+    echo ""
+    echo "Vérifiez que vous avez Java ${javaVersion} ou supérieur"
+    echo ""
+    exit 1
+fi
+`;
+}

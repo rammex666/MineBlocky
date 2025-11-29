@@ -74,6 +74,14 @@ header {
 }
 .download-btn:hover { background: #4ea546; }
 
+.compile-btn {
+    background: #e67e22; color: white; border: none;
+    padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+    display: flex; align-items: center; gap: 8px; transition: 0.2s;
+}
+.compile-btn:hover { background: #d35400; }
+.compile-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+
 /* LAYOUT */
 .main-container { 
     display: flex; flex: 1; 

@@ -10,9 +10,13 @@ var cachedCode = {
     commandClasses: {},
     commandsList: {},
     guiManager: "",
+    configManager: "",
     main: "",
     pom: "",
-    pluginYml: ""
+    pluginYml: "",
+    readme: "",
+    buildBat: "",
+    buildSh: ""
 };
 
 // Configuration du générateur Java
@@ -317,6 +321,40 @@ document.addEventListener("DOMContentLoaded", function () {
 
       <sep></sep>
 
+      <category name="Configuration & YAML" colour="#95a5a6">
+        <category name="Config.yml - Lecture" colour="#95a5a6">
+          <block type="config_get_string"></block>
+          <block type="config_get_int"></block>
+          <block type="config_get_double"></block>
+          <block type="config_get_boolean"></block>
+          <block type="config_get_string_list"></block>
+        </category>
+        <category name="Config.yml - Écriture" colour="#95a5a6">
+          <block type="config_set"></block>
+          <block type="config_set_list"></block>
+        </category>
+        <category name="Config.yml - Gestion" colour="#95a5a6">
+          <block type="config_save"></block>
+          <block type="config_reload"></block>
+          <block type="config_contains"></block>
+          <block type="config_get_keys"></block>
+          <block type="config_create_section"></block>
+          <block type="config_add_default"></block>
+        </category>
+        <category name="Fichiers YAML personnalisés" colour="#7f8c8d">
+          <block type="yaml_load_file"></block>
+          <block type="yaml_get"></block>
+          <block type="yaml_set"></block>
+          <block type="yaml_save_file"></block>
+        </category>
+        <category name="Listes (Helpers)" colour="#95a5a6">
+          <block type="config_create_list"></block>
+          <block type="config_list_add"></block>
+        </category>
+      </category>
+
+      <sep></sep>
+
       <category name="Général" colour="${COLORS.CANCEL}">
         <block type="event_cancel"></block>
       </category>
@@ -361,6 +399,7 @@ function defineAllBlocks() {
     defineGUIBlocks(javaGenerator);
     defineCommandBlocks(javaGenerator);
     defineDataBlocks(javaGenerator);
+    defineConfigBlocks(javaGenerator);
 }
 
 /* =========================================
@@ -390,12 +429,20 @@ window.manualGenerate = function() {
     // Générer GUIManager
     cachedCode.guiManager = generateGUIManagerClass();
 
+    // Générer ConfigManager
+    cachedCode.configManager = generateConfigManagerClass();
+
     // Générer Main.java avec tous les listeners et commandes
     cachedCode.main = generateMainClass(pluginName, cachedCode.listenerClasses, cachedCode.commandClasses);
 
     // Générer pom.xml et plugin.yml
     cachedCode.pom = generatePomXml(pluginName, versionInfo.java, versionInfo.api);
     cachedCode.pluginYml = generatePluginYml(pluginName, cachedCode.commandsList);
+
+    // Générer les scripts de compilation et README
+    cachedCode.readme = generateReadme(pluginName, versionInfo.java, selectedVersion);
+    cachedCode.buildBat = generateBuildBat(pluginName, versionInfo.java);
+    cachedCode.buildSh = generateBuildSh(pluginName, versionInfo.java);
 
     updateCurrentTabDisplay();
 };
@@ -413,6 +460,7 @@ window.downloadSourceCode = function() {
     const packageFolder = zip.folder("src/main/java/com/mineblockly/plugin");
     packageFolder.file("Main.java", cachedCode.main);
     packageFolder.file("GUIManager.java", cachedCode.guiManager);
+    packageFolder.file("ConfigManager.java", cachedCode.configManager);
 
     // Créer toutes les classes listener dans le package events
     if (Object.keys(cachedCode.listenerClasses).length > 0) {
@@ -432,6 +480,11 @@ window.downloadSourceCode = function() {
 
     zip.folder("src/main/resources").file("plugin.yml", cachedCode.pluginYml);
     zip.file("pom.xml", cachedCode.pom);
+
+    // Ajouter les scripts de compilation et documentation
+    zip.file("README.md", cachedCode.readme);
+    zip.file("build.bat", cachedCode.buildBat);
+    zip.file("build.sh", cachedCode.buildSh);
 
     zip.generateAsync({ type: "blob" }).then(function(content) {
         saveAs(content, pluginName + "_Sources.zip");
@@ -481,18 +534,22 @@ window.switchTab = function(tabName) {
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(t => t.classList.remove('active'));
 
-    if (tabName === 'gui') {
+    if (tabName === 'readme') {
         tabs[0].classList.add('active');
-    } else if (tabName === 'listeners') {
+    } else if (tabName === 'gui') {
         tabs[1].classList.add('active');
-    } else if (tabName === 'commands') {
+    } else if (tabName === 'config') {
         tabs[2].classList.add('active');
-    } else if (tabName === 'main') {
+    } else if (tabName === 'listeners') {
         tabs[3].classList.add('active');
-    } else if (tabName === 'pom') {
+    } else if (tabName === 'commands') {
         tabs[4].classList.add('active');
-    } else if (tabName === 'pluginyml') {
+    } else if (tabName === 'main') {
         tabs[5].classList.add('active');
+    } else if (tabName === 'pom') {
+        tabs[6].classList.add('active');
+    } else if (tabName === 'pluginyml') {
+        tabs[7].classList.add('active');
     }
 
     updateCurrentTabDisplay();
@@ -509,8 +566,12 @@ function updateCurrentTabDisplay() {
 
     const tabText = activeTab.textContent;
 
-    if (tabText.includes('GUIManager')) {
+    if (tabText.includes('README')) {
+        preview.textContent = cachedCode.readme || '# README\n# Générez le code pour voir les instructions de compilation';
+    } else if (tabText.includes('GUIManager')) {
         preview.textContent = cachedCode.guiManager || '// GUIManager.java\n// Pas encore généré';
+    } else if (tabText.includes('ConfigManager')) {
+        preview.textContent = cachedCode.configManager || '// ConfigManager.java\n// Pas encore généré';
     } else if (tabText.includes('Listeners')) {
         // Afficher tous les listeners
         const allListeners = Object.entries(cachedCode.listenerClasses)
@@ -528,6 +589,126 @@ function updateCurrentTabDisplay() {
     } else if (tabText.includes('pom.xml')) {
         preview.textContent = cachedCode.pom || '// pom.xml\n// Pas encore généré';
     } else if (tabText.includes('plugin.yml')) {
-        preview.textContent = cachedCode.pluginYml || '# plugin.yml\n# Pas encore généré';
+        preview.textContent = cachedCode.pluginYml || '# plugin.yml\n// Pas encore généré';
     }
 }
+
+/* =========================================
+   COMPILATION EN JAR
+   ========================================= */
+
+/**
+ * Ajoute un message dans la console
+ */
+function logToConsole(message, type = 'info') {
+    const consoleContent = document.getElementById('consoleContent');
+    const timestamp = new Date().toLocaleTimeString();
+    const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '>';
+    consoleContent.innerHTML += `<div class="${type}">${icon} [${timestamp}] ${message}</div>`;
+    consoleContent.scrollTop = consoleContent.scrollHeight;
+}
+
+/**
+ * Compile le plugin en JAR via le serveur
+ */
+window.compilePlugin = async function() {
+    // Générer le code si nécessaire
+    window.manualGenerate();
+
+    const pluginName = document.getElementById('pluginName').value || "MonPlugin";
+    const selectedVersion = document.getElementById('versionSelect').value;
+    const versionInfo = VERSION_DATA[selectedVersion];
+
+    // Vérifier que le code a été généré
+    if (!cachedCode.main) {
+        logToConsole("Erreur : Générez d'abord le code avec le bouton 'Générer'", 'error');
+        return;
+    }
+
+    // Désactiver le bouton pendant la compilation
+    const compileBtn = document.querySelector('.compile-btn');
+    const originalHTML = compileBtn.innerHTML;
+    compileBtn.disabled = true;
+    compileBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Compilation...';
+
+    logToConsole(`Démarrage de la compilation de ${pluginName}...`, 'info');
+    logToConsole(`Version Minecraft: ${selectedVersion}, Java: ${versionInfo.java}`, 'info');
+
+    try {
+        // Préparer les données du projet
+        const projectData = {
+            project: {
+                main: cachedCode.main,
+                guiManager: cachedCode.guiManager,
+                configManager: cachedCode.configManager,
+                listenerClasses: cachedCode.listenerClasses,
+                commandClasses: cachedCode.commandClasses,
+                pluginYml: cachedCode.pluginYml,
+                pom: cachedCode.pom
+            },
+            pluginName: pluginName,
+            javaVersion: versionInfo.java
+        };
+
+        logToConsole('Envoi du projet au serveur de compilation...', 'info');
+
+        // Envoyer au serveur
+        const response = await fetch('http://localhost:3000/compile-full', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(projectData)
+        });
+
+        // Vérifier le type de contenu de la réponse
+        const contentType = response.headers.get('content-type');
+
+        if (!response.ok) {
+            // En cas d'erreur, le serveur renvoie du JSON
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erreur de compilation');
+            } else {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Erreur de compilation');
+            }
+        }
+
+        // Si la réponse est OK, vérifier si c'est un fichier ou du JSON
+        if (contentType && contentType.includes('application/json')) {
+            // C'est une réponse JSON (probablement une erreur)
+            const jsonData = await response.json();
+            if (!jsonData.success) {
+                throw new Error(jsonData.error || 'Erreur de compilation');
+            }
+        } else {
+            // C'est un fichier binaire (le JAR)
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${pluginName}.jar`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            logToConsole(`✨ Compilation réussie ! Téléchargement de ${pluginName}.jar`, 'success');
+            logToConsole(`📦 Le fichier JAR est prêt à être installé sur votre serveur`, 'success');
+        }
+
+    } catch (error) {
+        logToConsole(`Erreur : ${error.message}`, 'error');
+
+        if (error.message.includes('Failed to fetch')) {
+            logToConsole('⚠️ Le serveur de compilation n\'est pas démarré', 'warning');
+            logToConsole('💡 Lancez "node server.js" dans un terminal pour activer la compilation', 'info');
+            logToConsole('💡 Ou téléchargez le ZIP et compilez manuellement avec build.bat/build.sh', 'info');
+        }
+    } finally {
+        // Réactiver le bouton
+        compileBtn.disabled = false;
+        compileBtn.innerHTML = originalHTML;
+    }
+};

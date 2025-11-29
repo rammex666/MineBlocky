@@ -60,7 +60,7 @@ app.post('/compile', async (req, res) => {
                 console.log(`[${buildId}] Succès ! Envoi du fichier.`);
                 res.download(path.join(targetDir, jarFile), `${pluginName}.jar`, (err) => {
                     // Nettoyage optionnel après envoi (désactivé pour debug)
-                    // fs.remove(workDir); 
+                    // fs.remove(workDir);
                 });
             } else {
                 res.status(500).send("Compilation réussie mais aucun fichier .jar trouvé.");
@@ -70,6 +70,116 @@ app.post('/compile', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send("Erreur interne serveur.");
+    }
+});
+
+// Nouvelle route pour compiler le projet complet
+app.post('/compile-full', async (req, res) => {
+    const { project, pluginName, javaVersion } = req.body;
+    const buildId = uuidv4();
+    const workDir = path.join(BUILD_DIR, buildId);
+
+    console.log(`[${buildId}] Compilation complète : ${pluginName} (Java ${javaVersion})`);
+
+    try {
+        // Créer la structure du projet
+        await fs.ensureDir(workDir);
+
+        // Créer l'arborescence des packages Java
+        const javaPackageDir = path.join(workDir, 'src', 'main', 'java', 'com', 'mineblockly', 'plugin');
+        await fs.ensureDir(javaPackageDir);
+
+        // Créer les dossiers pour events et commands
+        const eventsDir = path.join(javaPackageDir, 'events');
+        const commandsDir = path.join(javaPackageDir, 'commands');
+        await fs.ensureDir(eventsDir);
+        await fs.ensureDir(commandsDir);
+
+        // Créer le dossier resources
+        const resourcesDir = path.join(workDir, 'src', 'main', 'resources');
+        await fs.ensureDir(resourcesDir);
+
+        // Écrire tous les fichiers Java principaux
+        await fs.writeFile(path.join(javaPackageDir, 'Main.java'), project.main);
+        await fs.writeFile(path.join(javaPackageDir, 'GUIManager.java'), project.guiManager);
+        await fs.writeFile(path.join(javaPackageDir, 'ConfigManager.java'), project.configManager);
+
+        // Écrire tous les listeners
+        for (const [className, code] of Object.entries(project.listenerClasses)) {
+            await fs.writeFile(path.join(eventsDir, `${className}.java`), code);
+        }
+
+        // Écrire toutes les commandes
+        for (const [className, code] of Object.entries(project.commandClasses)) {
+            await fs.writeFile(path.join(commandsDir, `${className}.java`), code);
+        }
+
+        // Écrire les fichiers de configuration
+        await fs.writeFile(path.join(resourcesDir, 'plugin.yml'), project.pluginYml);
+        await fs.writeFile(path.join(workDir, 'pom.xml'), project.pom);
+
+        console.log(`[${buildId}] Structure créée, lancement de Maven...`);
+
+        // Lancer Maven
+        const mvnCommand = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
+        const mvnProcess = exec(`${mvnCommand} clean package -DskipTests`, {
+            cwd: workDir,
+            maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+        }, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`[${buildId}] Erreur Maven:`, stdout);
+                return res.status(500).json({
+                    success: false,
+                    error: "Erreur de compilation",
+                    log: stdout
+                });
+            }
+
+            // Trouver le .jar généré
+            const targetDir = path.join(workDir, 'target');
+
+            fs.readdir(targetDir, (err, files) => {
+                if (err) {
+                    return res.status(500).json({
+                        success: false,
+                        error: "Erreur lors de la recherche du JAR"
+                    });
+                }
+
+                const jarFile = files.find(file => file.endsWith('.jar') && !file.includes('original'));
+
+                if (jarFile) {
+                    console.log(`[${buildId}] Succès ! Envoi : ${jarFile}`);
+                    res.download(path.join(targetDir, jarFile), `${pluginName}.jar`, (err) => {
+                        if (!err) {
+                            // Nettoyage après 30 secondes
+                            setTimeout(() => {
+                                fs.remove(workDir).catch(console.error);
+                            }, 30000);
+                        }
+                    });
+                } else {
+                    res.status(500).json({
+                        success: false,
+                        error: "Compilation réussie mais aucun JAR trouvé",
+                        log: stdout
+                    });
+                }
+            });
+        });
+
+        // Afficher la progression en temps réel
+        mvnProcess.stdout.on('data', (data) => {
+            console.log(`[${buildId}] ${data.toString().trim()}`);
+        });
+
+    } catch (err) {
+        console.error(`[${buildId}] Erreur:`, err);
+        res.status(500).json({
+            success: false,
+            error: "Erreur interne serveur",
+            details: err.message
+        });
     }
 });
 

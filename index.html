@@ -29,6 +29,7 @@
     <script src="blocks/gui.js"></script>
     <script src="blocks/commands.js"></script>
     <script src="blocks/data.js"></script>
+    <script src="blocks/config.js"></script>
 
     <!-- Générateurs de templates Java -->
     <script src="generators.js"></script>
@@ -72,6 +73,9 @@
             <button class="download-btn" onclick="downloadSourceCode()">
                 <i class="fas fa-file-archive"></i> (.zip)
             </button>
+            <button class="compile-btn" onclick="compilePlugin()" title="Compiler en JAR (serveur requis)">
+                <i class="fas fa-hammer"></i> Compiler
+            </button>
         </div>
     </header>
 
@@ -82,7 +86,9 @@
 
         <div class="right-panel">
             <div class="panel-tabs">
-                <div class="tab active" onclick="switchTab('gui')">GUIManager</div>
+                <div class="tab active" onclick="switchTab('readme')">📖 README</div>
+                <div class="tab" onclick="switchTab('gui')">GUIManager</div>
+                <div class="tab" onclick="switchTab('config')">ConfigManager</div>
                 <div class="tab" onclick="switchTab('listeners')">Listeners</div>
                 <div class="tab" onclick="switchTab('commands')">Commands</div>
                 <div class="tab" onclick="switchTab('main')">Main.java</div>
