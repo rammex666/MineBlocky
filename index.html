@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>MineBlockly Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly/java_compressed.js"></script> 
+    <script src="https://unpkg.com/blockly/msg/fr.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Configuration et constantes -->
+    <script src="config.js"></script>
+
+    <!-- Fonctions utilitaires -->
+    <script src="helpers.js"></script>
+
+    <!-- Définitions des blocs -->
+    <script src="blocks/logic.js"></script>
+    <script src="blocks/conditions.js"></script>
+    <script src="blocks/events.js"></script>
+    <script src="blocks/actions.js"></script>
+    <script src="blocks/inventory.js"></script>
+    <script src="blocks/world.js"></script>
+    <script src="blocks/gui.js"></script>
+    <script src="blocks/commands.js"></script>
+    <script src="blocks/data.js"></script>
+
+    <!-- Générateurs de templates Java -->
+    <script src="generators.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <i class="fas fa-cube"></i> MineBlockly 
+            <span style="font-size:0.8rem; opacity:0.7; font-weight:normal; margin-left:5px;">v1.2</span>
+        </div>
+        
+        <div class="project-tools">
+            <button class="project-btn" onclick="saveProjectFile()">
+                <i class="fas fa-save"></i>
+            </button>
+            <button class="project-btn" onclick="document.getElementById('fileLoadInput').click()">
+                <i class="fas fa-folder-open"></i>
+            </button>
+            <input type="file" id="fileLoadInput" style="display:none" onchange="loadProjectFile(this)" accept=".mine,.json">
+        </div>
+
+        <div class="plugin-config">
+            <input type="text" id="pluginName" value="MonPlugin" placeholder="Nom">
+            
+            <select id="versionSelect" class="version-select">
+                <option value="1.20">MC 1.20.x (Java 17)</option>
+                <option value="1.19">MC 1.19.x (Java 17)</option>
+                <option value="1.18">MC 1.18.x (Java 17)</option>
+                <option value="1.17">MC 1.17.x (Java 16)</option>
+                <option value="1.16">MC 1.16.5 (Java 16)</option>
+                <option value="1.12">MC 1.12.2 (Java 8)</option>
+                <option value="1.8">MC 1.8.8 (Java 8)</option>
+            </select>
+        </div>
+        
+        <div class="actions">
+            <button class="generate-btn" onclick="manualGenerate()">
+                <i class="fas fa-code"></i> Générer
+            </button>
+            <button class="download-btn" onclick="downloadSourceCode()">
+                <i class="fas fa-file-archive"></i> (.zip)
+            </button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div id="blocklyArea">
+            <div id="blocklyDiv"></div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-tabs">
+                <div class="tab active" onclick="switchTab('gui')">GUIManager</div>
+                <div class="tab" onclick="switchTab('listeners')">Listeners</div>
+                <div class="tab" onclick="switchTab('commands')">Commands</div>
+                <div class="tab" onclick="switchTab('main')">Main.java</div>
+                <div class="tab" onclick="switchTab('pom')">pom.xml</div>
+                <div class="tab" onclick="switchTab('pluginyml')">plugin.yml</div>
+            </div>
+            <div class="code-preview" id="codePreview">// Sélectionnez une version et générez le code...</div>
+        </div>
+    </div>
+
+    <div class="console">
+        <div class="console-header">
+            <span>Journal d'activité</span>
+            <span style="cursor:pointer" onclick="document.getElementById('consoleContent').innerHTML = ''"><i class="fas fa-trash"></i> Effacer</span>
+        </div>
+        <div id="consoleContent">
+            <div>> Prêt. Choisissez la version de Minecraft en haut.</div>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+</body>
+</html>
